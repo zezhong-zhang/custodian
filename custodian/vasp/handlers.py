@@ -1002,13 +1002,32 @@ class MeshSymmetryErrorHandler(ErrorHandler):
         """Perform corrections."""
         backup(VASP_BACKUP_FILES | {self.output_filename})
         vi = VaspInput.from_directory(".")
-        m = prod(vi["KPOINTS"].kpts[0])
-        m = max(int(round(m ** (1 / 3))), 1)
+        # Turn off symmetry and make the symmetry detection threshold more severe
+        incar_changes = {
+            "ISYM": 0,
+            "SYMPREC": 1E-8
+        }
+
+        # Generate an odd k-mesh if needed
+        kpoints_changes = {}
         if vi["KPOINTS"] and vi["KPOINTS"].style.name.lower().startswith("m"):
-            m += m % 2
-        actions = [{"dict": "KPOINTS", "action": {"_set": {"kpoints": [[m] * 3]}}}]
+            m = prod(vi["KPOINTS"].kpts[0])
+            m = max(int(round(m ** (1 / 3))), 1)
+            if m % 2 == 0:  # Make sure k-points are odd
+                m += 1
+            kpoints_changes["_set"] = {"kpoints": [[m] * 3]}
+        
+        # Apply the changes
+        actions = []
+        if incar_changes:
+            actions.append({"dict": "INCAR", "action": {"_set": incar_changes}})
+        if kpoints_changes:
+            actions.append({"dict": "KPOINTS", "action": kpoints_changes})
+
+        # Use a VaspModder to apply the changes
         VaspModder(vi=vi).apply_actions(actions)
-        return {"errors": ["mesh_symmetry"], "actions": actions}
+
+        return {"errors": ["mesh_symmetry"], "actions": actions}        
 
 
 class UnconvergedErrorHandler(ErrorHandler):
