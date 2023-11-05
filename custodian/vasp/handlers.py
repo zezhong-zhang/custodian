@@ -974,7 +974,7 @@ class MeshSymmetryErrorHandler(ErrorHandler):
 
         vi = VaspInput.from_directory(".")
         # disregard this error if KSPACING is set and no KPOINTS file is generated
-        if vi["INCAR"].get("KSPACING", False):
+        if vi["INCAR"].get("KSPACING", False) and vi["KPOINTS"] is None:
             return False
 
         # According to VASP admins, you can disregard this error
