@@ -14,7 +14,6 @@ import time
 import warnings
 from collections import Counter
 from math import prod
-from httpx import delete
 
 import numpy as np
 from monty.os.path import zpath
