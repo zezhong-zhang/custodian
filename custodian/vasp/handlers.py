@@ -14,6 +14,7 @@ import time
 import warnings
 from collections import Counter
 from math import prod
+from httpx import delete
 
 import numpy as np
 from monty.os.path import zpath
@@ -1010,19 +1011,20 @@ class MeshSymmetryErrorHandler(ErrorHandler):
 
         # Generate an odd k-mesh if needed
         kpoints_changes = {}
-        if vi["KPOINTS"] and vi["KPOINTS"].style.name.lower().startswith("m"):
-            m = prod(vi["KPOINTS"].kpts[0])
-            m = max(int(round(m ** (1 / 3))), 1)
-            if m % 2 == 0:  # Make sure k-points are odd
-                m += 1
-            kpoints_changes["_set"] = {"kpoints": [[m] * 3]}
-        
+        if vi["KPOINTS"] and vi["KPOINTS"].style.name.lower().startswith("g"):
+            kpts = vi["KPOINTS"].kpts[0]
+            new_kpts = [k + 1 if k % 2 == 0 else k for k in kpts]  # Ensure all k-points are odd
+            kpoints_changes["_set"] = {"kpoints": [new_kpts]}
+        if vi["INCAR"].get("KSPACING", False):
+            kpoints_delete = {"file": "KPOINTS", "action": {"_file_delete": {"mode": "actual"}}}        
         # Apply the changes
         actions = []
         if incar_changes:
             actions.append({"dict": "INCAR", "action": {"_set": incar_changes}})
         if kpoints_changes:
             actions.append({"dict": "KPOINTS", "action": kpoints_changes})
+        if kpoints_delete:
+            actions.append(kpoints_delete)
 
         # Use a VaspModder to apply the changes
         VaspModder(vi=vi).apply_actions(actions)
